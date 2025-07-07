@@ -1,9 +1,11 @@
 import pygame
 
-from code.const import WIN_HEIGHT
+from code.Item import Item
+from code.const import WIN_HEIGHT, EVENT_LEVEL_END
 from code.entity import Entity
 from code.enemy import Enemy
 from code.player import Player
+from code.win import Win
 
 
 class EntityMediator:
@@ -48,6 +50,23 @@ class EntityMediator:
                 if hasattr(ent2, 'attacking') and ent2.attacking:
                     if hasattr(ent1, 'take_damage'):
                         ent1.take_damage(ent2.damage, attacker=ent2)
+
+        if isinstance(ent1, Player) and isinstance(ent2, Item):
+            if ent1.rect.colliderect(ent2.rect):
+                ent1.score += ent2.score_value
+                ent2.dead = True
+
+        elif isinstance(ent2, Player) and isinstance(ent1, Item):
+            if ent2.rect.colliderect(ent1.rect):
+                ent2.score += ent1.score_value
+                ent1.dead = True
+
+        if isinstance(ent1, Player) and isinstance(ent2, Win) or isinstance(ent2, Player) and isinstance(ent1, Win):
+            player = ent1 if isinstance(ent1, Player) else ent2
+            win = ent2 if isinstance(ent2, Win) else ent1
+
+            if player.rect.colliderect(win.rect):
+                pygame.event.post(pygame.event.Event(EVENT_LEVEL_END))
 
 
     @staticmethod
@@ -96,8 +115,8 @@ class EntityMediator:
 
     @staticmethod
     def verify_health(entity_list: list[Entity]):
-        for ent in entity_list:
-            if ent.health <= 0:
+        for ent in entity_list[:]:
+            if (hasattr(ent, 'health') and ent.health <= 0) or getattr(ent, 'dead', False):
                 if isinstance(ent, Enemy):
                     EntityMediator.__give_score(ent, entity_list)
                 entity_list.remove(ent)

@@ -41,8 +41,14 @@ class Entity(ABC):
         if attacker:
             self.last_attacker = attacker
 
+        from code.enemy import Enemy
+        from code.player import Player
+        if isinstance(self, Player) and isinstance(attacker, Enemy):
+            self.score = max(0, self.score - 10)
+
+
         if self.health <= 0:
-            self.state = 'dead'
+            self.dead = True
         else:
             self.state = 'hurt'
             self.hurt_time = pygame.time.get_ticks()
@@ -50,9 +56,5 @@ class Entity(ABC):
         self.frame_index = 0
 
     def die(self):
-        if self.state == 'dead':
-            return
-        self.state = 'dead'
-        self.frame_index = 0.0
         self.dead = True
 

@@ -28,15 +28,20 @@ class Enemy(Entity):
             'run': 0.1,
             'attack': 0.15,
             'hurt': 0.1,
-            'dead': 0.1,
         }
+        if name == "enemy1":
+            self.animations = {
+                'run': self.load_frames_from_folder('./asset/enemy1', 'enemy1Run_', 8),
+                'attack': self.load_frames_from_folder('./asset/enemy1', 'enemy1Attack_', 5),
+                'hurt': self.load_frames_from_folder('./asset/enemy1', 'enemy1Hurt_', 5),
+            }
+        else:
+            self.animations = {
+                'run': self.load_frames_from_folder('./asset/enemy2', 'enemy2Run_', 8),
+                'attack': self.load_frames_from_folder('./asset/enemy2', 'enemy2Attack_', 8),
+                'hurt': self.load_frames_from_folder('./asset/enemy2', 'enemy2Hurt_', 5),
+            }
 
-        self.animations = {
-            'run': self.load_frames_from_folder('./asset/enemy1', 'enemy1Run_', 8),
-            'attack': self.load_frames_from_folder('./asset/enemy1', 'enemy1Attack_', 5),
-            'hurt': self.load_frames_from_folder('./asset/enemy1', 'enemy1Hurt_', 5),
-            'dead': self.load_frames_from_folder('./asset/enemy1', 'enemy1Die_', 5)
-        }
 
         self.image = self.animations[self.state][0]
         self.rect = self.image.get_rect(topleft=position)
@@ -48,7 +53,7 @@ class Enemy(Entity):
             ]
 
     def update_animation(self):
-        valid_states = ['run', 'attack', 'hurt', 'dead']
+        valid_states = ['run', 'attack', 'hurt']
         if self.state not in valid_states:
             self.state = 'run'
 
@@ -61,9 +66,6 @@ class Enemy(Entity):
                 self.state = 'run'
             elif self.state == 'hurt':
                 self.state = 'run'
-            elif self.state == 'dead':
-                self.dead = True
-                return
 
         frame = self.animations[self.state][int(self.frame_index)]
         if self.facing_left:
@@ -72,13 +74,6 @@ class Enemy(Entity):
 
     def move(self, player=None):
         now = pygame.time.get_ticks()
-
-        # If it is dead, it only animates death and stops
-        if self.state == 'dead':
-            self.update_animation()
-            if self.frame_index >= len(self.animations['dead']):
-                self.dead = True
-            return
 
         # If you are hurt, just animate hurt and stop
         if self.state == 'hurt':
@@ -100,6 +95,30 @@ class Enemy(Entity):
         if self.cooldown_timer > 0:
             self.cooldown_timer -= 1
 
+        if self.name == 'enemy2' and player:
+            range_visual = 150
+            range_ataque = self.range
+
+            dx = player.rect.centerx - self.rect.centerx
+            dy = player.rect.centery - self.rect.centery
+            distance = (dx ** 2 + dy ** 2) ** 0.5
+
+            if distance <= range_visual:
+                if distance > range_ataque:
+                    direction_x = 1 if dx > 0 else -1
+                    direction_y = 1 if dy > 0 else -1
+                    self.rect.x += direction_x * self.speed
+                    self.rect.y += direction_y * self.speed
+                    self.facing_left = dx < 0
+                else:
+                    if self.cooldown_timer == 0:
+                        self.state = 'attack'
+                        self.frame_index = 0
+                        player.take_damage(self.damage, attacker=self)
+                        self.cooldown_timer = self.cooldown
+                self.update_animation()
+                return
+
         # Patrol movement
         if self.facing_left:
             self.rect.x -= self.speed
@@ -110,6 +129,7 @@ class Enemy(Entity):
             if self.rect.x >= self.start_x + self.patrol_range:
                 self.facing_left = True
 
+
         # Checks if it can attack the player
         if player:
             distance_x = abs(self.rect.centerx - player.rect.centerx)
@@ -118,7 +138,7 @@ class Enemy(Entity):
             if distance_x < self.range and distance_y < 40 and self.cooldown_timer == 0:
                 self.state = 'attack'
                 self.frame_index = 0
-                player.take_damage(self.damage)
+                player.take_damage(self.damage, attacker=self)
                 self.cooldown_timer = self.cooldown
 
         # Updates animation according to current state

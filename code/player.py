@@ -24,7 +24,7 @@ class Player(Entity):
         self.vertical_speed = 0
 
         self.last_jump_time = 0
-        self.jump_cooldown = 800
+        self.jump_cooldown = 600
 
         self.score = 0
 
@@ -33,8 +33,7 @@ class Player(Entity):
             'run': 0.1,
             'jump': 0.1,
             'attack': 0.2,
-            'hurt': 0.1,
-            'dead': 0.1
+            'hurt': 0.1
         }
 
         # Load animations
@@ -44,7 +43,6 @@ class Player(Entity):
             'jump': self.load_frames_from_folder('./asset/player', 'jump_', 8),
             'attack': self.load_frames_from_folder('./asset/player', 'attack_', 4),
             'hurt': self.load_frames_from_folder('./asset/player', 'hurt_', 4),
-            'dead': self.load_frames_from_folder('./asset/player', 'hurt_', 4)
         }
         self.image = self.animations['idle'][0]
 
@@ -56,7 +54,7 @@ class Player(Entity):
         ]
 
     def update_animation(self):
-        valid_states = ['idle', 'run', 'jump', 'attack', 'hurt', 'dead']
+        valid_states = ['idle', 'run', 'jump', 'attack', 'hurt']
         if self.state not in valid_states:
             self.state = 'idle'
 
@@ -70,9 +68,7 @@ class Player(Entity):
                 self.state = 'idle'
             elif self.state == 'hurt':
                 self.state = 'idle'
-            elif self.state == 'dead':
-                self.dead = True
-                return
+
 
         frame = self.animations[self.state][int(self.frame_index)]
         if self.facing_left:
@@ -152,4 +148,5 @@ class Player(Entity):
         self.rect.x += dx
 
         self.update_animation()
+
 
