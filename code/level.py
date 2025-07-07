@@ -10,38 +10,50 @@ from pygame.font import Font
 import pytmx
 from pytmx.util_pygame import load_pygame
 
-from code.const import COLOR_OPTION, WIN_HEIGHT, EVENT_ENEMY, SPAWN_TIME
+from code.const import C_OPTION, WIN_HEIGHT, EVENT_ENEMY, SPAWN_TIME, C_TEST
 from code.entity import Entity
 from code.entityFactory import EntityFactory
 from code.camera import Camera
-
+from code.entityMediator import EntityMediator
 
 class Level:
     def __init__(self, window, name):
         self.timeout = 20000  # 20 seconds
         self.window = window
         self.name = name
+        self.platforms = []
 
         # Load Tiled map
         self.tmx_data = load_pygame(f'asset/maps/level1.tmx')
         self.tile_width = self.tmx_data.tilewidth
         self.tile_height = self.tmx_data.tileheight
 
+        # Initializing entities
         self.entity_list: list[Entity] = []
-       # self.entity_list.extend(EntityFactory.get_entity('background'))
         self.entity_list.append(EntityFactory.get_entity('player'))
-        pygame.time.set_timer(EVENT_ENEMY, SPAWN_TIME)
+
+        self.entity_list.append(EntityFactory.get_entity('enemy1', (330, 285), patrol_range=80))
+        self.entity_list.append(EntityFactory.get_entity('enemy1', (1210, 240), patrol_range=180))
+        self.entity_list.append(EntityFactory.get_entity('enemy1', (1680, 205), patrol_range=80))
+
+        self.platforms.append(EntityFactory.get_entity('platform', (485, 250)))
+        self.platforms.append(EntityFactory.get_entity('platform', (630, 280)))
+        self.platforms.append(EntityFactory.get_entity('platform', (920, 250)))
+        self.platforms.append(EntityFactory.get_entity('platform', (1520, 210)))
+        self.platforms.append(EntityFactory.get_entity('platform', (1470, 210)))
 
         map_width = self.tmx_data.width * self.tile_width
         map_height = self.tmx_data.height * self.tile_height
-        self.camera = Camera(self.window.get_width(), self.window.get_height(),  map_width, map_height)
+        self.camera = Camera(self.window.get_width(), self.window.get_height(), map_width, map_height)
 
+        # Define the player
         self.player = None
         for ent in self.entity_list:
             if ent.name == 'player':
                 self.player = ent
                 break
 
+        # Colliders
         self.collidable_rects = []
         for layer in self.tmx_data.visible_layers:
             if hasattr(layer, 'tiles') and layer.name == 'Camada de Blocos 5':
@@ -77,8 +89,16 @@ class Level:
                                     y * self.tile_height - self.camera.offset.y)
                         self.window.blit(surf, draw_pos)
 
+            for platform in self.platforms:
+                platform.update()
+                platform.draw(self.window, self.camera)
+
+            EntityMediator.verify_collision_platforms(self.player, self.platforms)
+
             for ent in self.entity_list:
                 draw_rect = self.camera.apply(ent.rect)
+                if ent.name == 'player':
+                    self.level_text(14, f'Health: {ent.health} | Score: {ent.score}', C_OPTION, (50, 25))
 
                 if hasattr(ent, 'image'):
                     self.window.blit(ent.image, draw_rect)
@@ -88,23 +108,27 @@ class Level:
                 if ent == self.player:
                     ent.move(self.collidable_rects)
                 else:
-                    ent.move()
+                    ent.move(self.player)
+
+            EntityMediator.verify_collision(
+                self.entity_list,
+                self.collidable_rects,
+            )
+
+            # Removes mortal entities
+            EntityMediator.verify_health(self.entity_list)
 
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     pygame.quit()
                     sys.exit()
-                if event.type == EVENT_ENEMY:
-                   # choice = random.choice(('enemy1', 'enemy2'))
-                    self.entity_list.append(EntityFactory.get_entity(('enemy1')))
 
             # Printed text
-            self.level_text(14, f'{self.name} = Timeout: {self.timeout / 1000 :.1f}s', COLOR_OPTION, (10,5))
-            self.level_text(14, f'fps: {clock.get_fps() :.0f}', COLOR_OPTION, (10, WIN_HEIGHT - 35))
-            self.level_text(14, f'entidades: {len(self.entity_list)}', COLOR_OPTION, (10, WIN_HEIGHT - 20))
+            self.level_text(14, f'{self.name} = Timeout: {self.timeout / 1000 :.1f}s', C_OPTION, (10, 5))
+            self.level_text(14, f'fps: {clock.get_fps() :.0f}', C_OPTION, (10, WIN_HEIGHT - 40))
+            self.level_text(14, f'entidades: {len(self.entity_list)}', C_OPTION, (10, WIN_HEIGHT - 25))
             pygame.display.flip()
 
-            pygame.draw.rect(self.window, (255, 0, 0), self.camera.apply(self.player.rect), 1)
 
     def level_text(self, text_size: int, text: str, text_color: tuple, text_pos: tuple):
             text_font: Font = pygame.font.Font("InknutAntiqua-Medium.ttf", text_size)

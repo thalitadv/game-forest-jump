@@ -6,12 +6,13 @@ from code.background import Background
 from code.const import WIN_WIDTH, WIN_HEIGHT
 from code.enemy import Enemy
 from code.player import Player
+from code.platform import Platform
 
 
 class EntityFactory:
 
     @staticmethod
-    def get_entity(entity_name: str, position=(0,0)):
+    def get_entity(entity_name: str, position=(0,0), **kwargs):
         match entity_name:
             case 'background':
                 list_bg = []
@@ -22,8 +23,9 @@ class EntityFactory:
             case 'player':
                 return Player('player', (10, WIN_HEIGHT - 200))
             case 'enemy1':
-                return Enemy('enemy1', (WIN_WIDTH + 10, random.randint(40, WIN_HEIGHT - 40)))
+                patrol_range = kwargs.get('patrol_range', 100)
+                return Enemy('enemy1', position, patrol_range)
             case 'enemy2':
                 return Enemy('enemy2', (WIN_WIDTH + 10, random.randint(40, WIN_HEIGHT - 40)))
-
-
+            case 'platform':
+                return Platform(position)
